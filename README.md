@@ -212,7 +212,7 @@ ninja
 * `zoo.db` — база даних SQLite.
 * `log.txt` — файл логів.
 
-## 📘 Documentation
+## Documentation
 The project documentation is automatically generated with **Doxygen**  
 and published via **GitHub Pages** after every commit to the `main` branch.  
 [View the documentation here](https://denysfreiuk.github.io/unit-tests/)
