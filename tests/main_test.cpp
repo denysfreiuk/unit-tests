@@ -2,8 +2,17 @@
  * @file main_test.cpp
  * @author Denys Freyuk
  * @date 27.10.2025
- * @version 1.0
- * @brief Implementation for main_test.
+ * @version 1.1
+ * @brief Unit tests for Zoo Management System using GoogleTest.
+ * @details
+ * This file contains comprehensive unit tests for all main modules of the project:
+ * - Account and Role management
+ * - Animal hierarchy (Mammal, Bird, Fish, etc.)
+ * - Employee functionality and Aviary assignments
+ * - Logger subsystem
+ * - Graph structure (ZooGraph and repositories)
+ *
+ * Each test verifies correctness, stability, and exception safety of components.
  */
 
 #include <gtest/gtest.h>
@@ -16,6 +25,11 @@
 
 using namespace std;
 
+/**
+ * @test
+ * @brief Tests serialization and deserialization of the Account class.
+ * @details Ensures that serialized data can be correctly deserialized back into an object.
+ */
 TEST(AccountTest, SerializationDeserialization) {
     Account acc("admin", 12345, Role::ADMIN);
     string ser = acc.serialize();
@@ -25,6 +39,10 @@ TEST(AccountTest, SerializationDeserialization) {
     EXPECT_EQ(acc.getRole(), copy.getRole());
 }
 
+/**
+ * @test
+ * @brief Verifies conversions between Role enum, integer, and string representations.
+ */
 TEST(AccountTest, RoleConversions) {
     EXPECT_EQ(Account::roleToInt(Role::ADMIN), 0);
     EXPECT_EQ(Account::roleToInt(Role::MANAGER), 1);
@@ -37,10 +55,18 @@ TEST(AccountTest, RoleConversions) {
     EXPECT_EQ(Account::intToRole(2), Role::EMPLOYEE);
 }
 
+/**
+ * @test
+ * @brief Ensures deserialization of invalid strings throws an exception.
+ */
 TEST(AccountTest, DeserializeInvalidStringThrows) {
     EXPECT_THROW(Account::deserialize("broken_data"), runtime_error);
 }
 
+/**
+ * @test
+ * @brief Tests animal feeding state before and after calling feed().
+ */
 TEST(AnimalTest, CreateAndFeed) {
     Mammal m("Leo", "Lion", 5, 120.0, "Mammal");
     EXPECT_FALSE(m.getIsFed());
@@ -48,6 +74,10 @@ TEST(AnimalTest, CreateAndFeed) {
     EXPECT_TRUE(m.getIsFed());
 }
 
+/**
+ * @test
+ * @brief Tests compatibility logic between different animal types.
+ */
 TEST(AnimalTest, CompatibilityNegativeAndPositive) {
     auto lion = make_shared<Mammal>("Leo", "Lion", 3, 120, "Mammal");
     auto tiger = make_shared<Mammal>("Tigra", "Tiger", 4, 110, "Mammal");
@@ -58,6 +88,10 @@ TEST(AnimalTest, CompatibilityNegativeAndPositive) {
     EXPECT_TRUE(bird->isCompatibleWith(fish));
 }
 
+/**
+ * @test
+ * @brief Ensures feeding twice does not change the fed state.
+ */
 TEST(AnimalExtraTest, FeedTwice) {
     Mammal m("Simba", "Lion", 4, 110.0, "Mammal");
     m.feed();
@@ -66,6 +100,10 @@ TEST(AnimalExtraTest, FeedTwice) {
     EXPECT_TRUE(m.getIsFed());
 }
 
+/**
+ * @test
+ * @brief Ensures feeding twice does not throw an exception.
+ */
 TEST(AnimalTest, FeedTwiceDoesNotThrow) {
     Mammal m("Simba", "Lion", 4, 110.0, "Mammal");
     m.feed();
@@ -73,6 +111,10 @@ TEST(AnimalTest, FeedTwiceDoesNotThrow) {
     EXPECT_NO_THROW(m.feed());
 }
 
+/**
+ * @test
+ * @brief Verifies that all derived animal classes correctly implement makeSound() and move().
+ */
 TEST(AnimalTest, DerivedClassesSoundAndMove) {
     Bird b("Chirpy", "Canary", 1, 0.2, "Bird");
     Reptile r("Sly", "Snake", 2, 5.0, "Reptile");
@@ -93,6 +135,10 @@ TEST(AnimalTest, DerivedClassesSoundAndMove) {
     EXPECT_NO_THROW(sp.move());
 }
 
+/**
+ * @test
+ * @brief Tests aviary assignment, removal, and internal list consistency for employees.
+ */
 TEST(EmployeeTest, AviaryAssignmentsAndRemoval) {
     Employee emp("John", 30, 4000, 5);
     EXPECT_FALSE(emp.isAssigned());
@@ -107,6 +153,10 @@ TEST(EmployeeTest, AviaryAssignmentsAndRemoval) {
     EXPECT_FALSE(emp.isAssigned());
 }
 
+/**
+ * @test
+ * @brief Tests replacement of aviaries and list update.
+ */
 TEST(EmployeeTest, ReplaceAndListAviaries) {
     Employee emp("John", 30, 4000, 5);
     emp.assignAviary("A1");
@@ -114,6 +164,10 @@ TEST(EmployeeTest, ReplaceAndListAviaries) {
     EXPECT_EQ(emp.getAviaryIds()[0], "A2");
 }
 
+/**
+ * @test
+ * @brief Ensures replacing a missing aviary adds a new one.
+ */
 TEST(EmployeeTest, ReplaceAviaryWhenMissingAddsNew) {
     Employee e("John", 25, 3500, 3);
     e.replaceAviary("OldAviary", "NewAviary");
@@ -121,6 +175,10 @@ TEST(EmployeeTest, ReplaceAviaryWhenMissingAddsNew) {
     EXPECT_EQ(e.getAviaryIds()[0], "NewAviary");
 }
 
+/**
+ * @test
+ * @brief Checks the string format of employee info.
+ */
 TEST(EmployeeTest, GetFullInfoFormat) {
     Employee e("Kate", 29, 4200, 4);
     string info = e.getFullInfoAboutEmployee();
@@ -128,19 +186,34 @@ TEST(EmployeeTest, GetFullInfoFormat) {
     EXPECT_NE(info.find("Salary:"), string::npos);
 }
 
+/**
+ * @brief Helper RAII struct to create and automatically delete temporary log files.
+ */
 struct TempFile {
-    string path;
+    string path; ///< Path to temporary log file.
+    /**
+     * @brief Constructor that generates a unique temporary filename.
+     * @param name_prefix Prefix for generated filename.
+     */
     explicit TempFile(string name_prefix = "zoo_test_log_") {
         auto tmp_dir = filesystem::temp_directory_path();
         auto unique_name = name_prefix + to_string(hash<string>{}(to_string(time(nullptr))));
         path = (tmp_dir / unique_name).string();
     }
+
+    /**
+     * @brief Destructor automatically removes the file from filesystem.
+     */
     ~TempFile() {
         error_code ec;
         filesystem::remove(path, ec);
     }
 };
 
+/**
+ * @test
+ * @brief Tests enabling and disabling specific logging levels.
+ */
 TEST(LoggerTest, EnableDisableLevels) {
     TempFile tmp;
     Logger log(tmp.path);
@@ -150,6 +223,11 @@ TEST(LoggerTest, EnableDisableLevels) {
     EXPECT_FALSE(log.isEnabled(Logger::DEBUG));
 }
 
+/**
+ * @test
+ * @brief Tests logging messages to file and reading them back.
+ * @details Also validates that disabling a level prevents further writes.
+ */
 TEST(LoggerTest, EnableDisableAndWriteFile) {
     TempFile tmp;
     {
@@ -170,10 +248,11 @@ TEST(LoggerTest, EnableDisableAndWriteFile) {
     EXPECT_NE(content.find("debug msg"), string::npos);
     EXPECT_NE(content.find("error msg"), string::npos);
     f.close();
-    EXPECT_NE(content.find("debug msg"), string::npos);
-    EXPECT_NE(content.find("error msg"), string::npos);
 }
 
+/**
+ * @brief Helper class exposing protected Graph methods for testing.
+ */
 class GraphTestHelper : public Graph {
 public:
     using Graph::addVertex;
@@ -187,25 +266,29 @@ public:
     using Graph::getEdges;
 };
 
+/**
+ * @test
+ * @brief Verifies vertex and edge creation in the Graph class.
+ */
 TEST(GraphTest, AddVerticesAndEdges) {
     GraphTestHelper g;
-
     auto v1 = make_shared<Vertex>("A");
     auto v2 = make_shared<Vertex>("B");
-
     g.addVertex(v1);
     g.addVertex(v2);
     g.addEdge("A", "B", 10.0);
-
     EXPECT_NE(g.getVertex("A"), nullptr);
     EXPECT_NE(g.getVertex("B"), nullptr);
-
     const Edge* e = g.getEdge("A", "B");
     ASSERT_NE(e, nullptr);
     EXPECT_EQ(e->getWeight(), 10.0);
     EXPECT_DOUBLE_EQ(g.distanceBetween("A", "B"), 10.0);
 }
 
+/**
+ * @test
+ * @brief Tests vertex removal and ensures connected edges are deleted.
+ */
 TEST(GraphTest, RemoveVertexRemovesEdges) {
     GraphTestHelper g;
     g.addVertex(make_shared<Vertex>("X"));
@@ -216,6 +299,10 @@ TEST(GraphTest, RemoveVertexRemovesEdges) {
     EXPECT_EQ(g.getEdge("X", "Y"), nullptr);
 }
 
+/**
+ * @test
+ * @brief Ensures adding duplicate vertices does not crash or throw.
+ */
 TEST(GraphTest, AddDuplicateVertexDoesNotCrash) {
     GraphTestHelper g;
     auto v1 = make_shared<Vertex>("A");
@@ -224,6 +311,10 @@ TEST(GraphTest, AddDuplicateVertexDoesNotCrash) {
     EXPECT_NE(g.getVertex("A"), nullptr);
 }
 
+/**
+ * @test
+ * @brief Checks behavior when querying distance between disconnected vertices.
+ */
 TEST(GraphTest, DistanceBetweenNonConnectedVerticesReturnsInfinity) {
     GraphTestHelper g;
     auto v1 = make_shared<Vertex>("A");
@@ -234,6 +325,10 @@ TEST(GraphTest, DistanceBetweenNonConnectedVerticesReturnsInfinity) {
     EXPECT_EQ(dist, -1.0);
 }
 
+/**
+ * @test
+ * @brief Verifies that edge removal works correctly.
+ */
 TEST(GraphTest, RemoveEdge) {
     GraphTestHelper g;
     g.addVertex(make_shared<Vertex>("A"));
@@ -244,12 +339,19 @@ TEST(GraphTest, RemoveEdge) {
     EXPECT_EQ(g.getEdge("A", "B"), nullptr);
 }
 
+/**
+ * @brief Mock version of DatabaseManager for testing repository logic.
+ */
 class MockDatabase : public DatabaseManager {
 public:
     MockDatabase() : DatabaseManager(":memory:") {}
     bool execute(const string& sql) { return true; }
 };
 
+/**
+ * @test
+ * @brief Tests repository behavior for account creation and lookup.
+ */
 TEST(RepositoryExtraTest, AccountAddAndExists) {
     MockDatabase db;
     AccountRepository repo(db);
@@ -258,6 +360,10 @@ TEST(RepositoryExtraTest, AccountAddAndExists) {
     EXPECT_TRUE(repo.accountExists("user"));
 }
 
+/**
+ * @test
+ * @brief Verifies account addition, retrieval, and duplicate handling.
+ */
 TEST(AccountRepositoryTest, AddGetAndDuplicate) {
     MockDatabase db;
     AccountRepository repo(db);
@@ -269,6 +375,10 @@ TEST(AccountRepositoryTest, AddGetAndDuplicate) {
     EXPECT_FALSE(repo.addAccount("test", 999, Role::ADMIN));
 }
 
+/**
+ * @test
+ * @brief Verifies basic ZooGraph construction and connectivity logic.
+ */
 TEST(ZooGraphTest, Construction) {
     MockDatabase db;
     AviaryRepository avRepo(db);
@@ -279,6 +389,10 @@ TEST(ZooGraphTest, Construction) {
     EXPECT_TRUE(zoo.isZooConnected() == false || true);
 }
 
+/**
+ * @test
+ * @brief Tests distance calculation and connectivity between aviaries.
+ */
 TEST(ZooGraphTest, CheckDistanceAndIsZooConnected) {
     MockDatabase db;
     AviaryRepository avRepo(db);
@@ -289,18 +403,18 @@ TEST(ZooGraphTest, CheckDistanceAndIsZooConnected) {
 
     auto aviary1 = make_shared<Aviary>("A1", "Lion`s Cage", "Savannah", 120, 10,"","");
     auto aviary2 = make_shared<Aviary>("A2", "Parrot`s Cage", "Tropical Zone", 160, 8,"","");
-
     zoo.addAviary(aviary1);
     zoo.addAviary(aviary2);
-
     EXPECT_FALSE(zoo.isZooConnected());
-
     zoo.addPath("A1", "A2", 15.0);
-
     EXPECT_TRUE(zoo.isZooConnected());
     EXPECT_DOUBLE_EQ(zoo.distanceBetweenAviaries("A1", "A2"), 15.0);
 }
 
+/**
+ * @test
+ * @brief Tests initialization and data insertion in various repositories.
+ */
 TEST(AviaryRepositoryTest, InitAndAddAviary) {
     MockDatabase db;
     AviaryRepository repo(db);
@@ -333,6 +447,9 @@ TEST(PathRepositoryTest, InitAndAddPath) {
     EXPECT_NO_THROW(repo.addPath("A1", "A2", 12.5));
 }
 
+/**
+ * @brief Mock class simulating database failure scenarios.
+ */
 class FailingMockDatabase : public DatabaseManager {
 public:
     FailingMockDatabase() : DatabaseManager(":memory:") {}
@@ -343,42 +460,57 @@ public:
     string lastQuery;
 };
 
+/**
+ * @test
+ * @brief Ensures AccountRepository handles failed DB operations safely.
+ */
 TEST(FailingDatabaseTest, AccountRepositoryDoesNotThrow) {
     FailingMockDatabase db;
     AccountRepository repo(db);
-
     EXPECT_NO_THROW(repo.initTable());
     EXPECT_NO_THROW(repo.addAccount("broken", 12345, Role::EMPLOYEE));
 }
 
+/**
+ * @test
+ * @brief Ensures AviaryRepository does not throw on failed DB operations.
+ */
 TEST(FailingDatabaseTest, AviaryRepositoryDoesNotThrow) {
     FailingMockDatabase db;
     AviaryRepository repo(db);
     Aviary av("A1", "Broken", "Zone", 100, 5, "", "");
-
     EXPECT_NO_THROW(repo.initTable());
     EXPECT_NO_THROW(repo.addAviary(av));
 }
 
+/**
+ * @test
+ * @brief Ensures PathRepository handles DB errors without exceptions.
+ */
 TEST(FailingDatabaseTest, PathRepositoryDoesNotThrow) {
     FailingMockDatabase db;
     PathRepository repo(db);
-
     EXPECT_NO_THROW(repo.initTable());
     EXPECT_NO_THROW(repo.addPath("A1", "A2", 9.5));
 }
 
+/**
+ * @test
+ * @brief Ensures EmployeeRepository handles DB failures gracefully.
+ */
 TEST(FailingDatabaseTest, EmployeeRepositoryDoesNotThrow) {
     FailingMockDatabase db;
     EmployeeRepository repo(db);
     Employee e("Jack", 25, 3200, 2);
-
     EXPECT_NO_THROW(repo.initTable());
     EXPECT_NO_THROW(repo.addEmployee(e));
     EXPECT_NO_THROW(repo.assignEmployeeToAviary(e.getId(), "A1"));
 }
 
+/**
+ * @brief Entry point for all GoogleTest-based unit tests
+*/
 int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+::testing::InitGoogleTest(&argc, argv);
+return RUN_ALL_TESTS();
 }

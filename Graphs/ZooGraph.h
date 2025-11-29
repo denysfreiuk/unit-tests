@@ -2,14 +2,25 @@
  * @file ZooGraph.h
  * @author Denys Freyuk
  * @date 27.10.2025
- * @version 1.0
- * @brief Header for ZooGraph declarations.
+ * @version 1.1
+ * @brief Declaration of the ZooGraph subsystem used in the Zoo Management System.
+ *
+ * This header defines the core classes representing the spatial graph of the zoo:
+ * - **Aviary** — a vertex representing an animal enclosure;
+ * - **Path** — a weighted connection between aviaries;
+ * - **ZooGraph** — the main graph structure combining all zoo entities and repositories.
+ *
+ * @details
+ * The ZooGraph integrates database repositories, employee and animal managers,
+ * and graph traversal algorithms. It forms the core of the system’s spatial logic.
  */
 
 #ifndef ZOOGRAPH_H
 #define ZOOGRAPH_H
+
 #include <memory>
 #include <string>
+#include <vector>
 #include "Graph.h"
 #include "../Creatures/EmployeeManager.h"
 #include "../Creatures/AnimalManager.h"
@@ -17,376 +28,242 @@
 #include "../DatabaseManager/PathRepository.h"
 #include "../DatabaseManager/AnimalRepository.h"
 #include "../DatabaseManager/EmployeeRepository.h"
+
+using namespace std;
+
 /**
  * @class Aviary
- * @brief Represents the Aviary entity in the zoo management system.
- * @details This class is part of the Zoo Management project.
- */
-/**
+ * @brief Represents an aviary (enclosure) in the zoo.
+ *
+ * Each Aviary contains animals, has an assigned employee, and stores physical
+ * attributes such as type, area, and capacity. It is implemented as a graph vertex.
+ *
+ * @details
+ * The Aviary class inherits from Vertex and extends it with additional zoo-related
+ * data such as resident animals and assigned caretaker.
+ *
  * @example
- * Aviary* obj = nullptr; // Create or obtain an instance
- * // Use the public interface as needed.
+ * @code
+ * Aviary a("Aviary1", "Bird", 150.5, 12);
+ * a.setAssignedEmployee("E001");
+ * a.addAnimal(make_shared<Mammal>("Leo", "Tiger", 5, 180.0, "Mammal"));
+ * @endcode
  */
-
-class Aviary : public Vertex  {
+class Aviary : public Vertex {
 
 private:
-    string name;
-    string type;
-    double area;
-    int capacity;
-    vector<shared_ptr<Animal>> animals;
-    string assignedEmployee;
-    string animalsStrTemp;
+    string name; ///< Name of the aviary.
+    string type; ///< Type of aviary (e.g., Mammal, Bird, Reptile).
+    double area; ///< Physical area in square meters.
+    int capacity; ///< Maximum number of animals allowed.
+    vector<shared_ptr<Animal>> animals; ///< Animals residing in this aviary.
+    string assignedEmployee; ///< ID of the employee assigned to this aviary.
+    string animalsStrTemp; ///< Temporary serialized string of animals (used for database sync).
+
 public:
-    Aviary(string& name,
-           string& type,
-           double area,
-           int capacity);
+    /// @name Constructors
+    /// @{
 
-    Aviary(string id,
-                   string name,
-                   string type,
-                   double area,
-                   int capacity,
-                   string assignedEmployee,
-                   const string animalsStr);
+    /**
+     * @brief Constructs a new aviary (for in-memory creation).
+     * @param name Name of the aviary.
+     * @param type Type of animals hosted.
+     * @param area Physical area of the aviary (m²).
+     * @param capacity Maximum allowed number of animals.
+     */
+    Aviary(string& name, string& type, double area, int capacity);
 
-/**
- * @brief Method getAnimalsStrTemp.
- * @return Result value.
- */
+    /**
+     * @brief Constructs an aviary with full attributes (e.g., loaded from a database).
+     * @param id Aviary ID.
+     * @param name Aviary name.
+     * @param type Type (category) of the aviary.
+     * @param area Size of the aviary.
+     * @param capacity Capacity (max animals).
+     * @param assignedEmployee ID of the assigned employee.
+     * @param animalsStr Serialized animal list.
+     */
+    Aviary(string id, string name, string type, double area, int capacity,
+           string assignedEmployee, const string animalsStr);
+
+    /// @}
+
+    /// @name Accessors
+    /// @{
+
     [[nodiscard]] const string& getAnimalsStrTemp() const;
-/**
- * @brief Method clearAnimalsStrTemp.
- */
-    void clearAnimalsStrTemp();
-/**
- * @brief Method getAnimalsRef.
- * @return Result value.
- */
-    vector<shared_ptr<Animal>>& getAnimalsRef();
-/**
- * @brief Method getIdAviary.
- * @return Result value.
- */
+    [[nodiscard]] vector<shared_ptr<Animal>>& getAnimalsRef();
     [[nodiscard]] string getIdAviary() const;
-/**
- * @brief Method getName.
- * @return Result value.
- */
     [[nodiscard]] string getName() const;
-/**
- * @brief Method getType.
- * @return Result value.
- */
     [[nodiscard]] string getType() const;
-/**
- * @brief Method getArea.
- * @return Result value.
- */
     [[nodiscard]] double getArea() const;
-/**
- * @brief Method getCapacity.
- * @return Result value.
- */
     [[nodiscard]] int getCapacity() const;
-/**
- * @brief Method getAnimals.
- * @return Result value.
- */
     [[nodiscard]] const vector<shared_ptr<Animal>>& getAnimals() const;
-/**
- * @brief Method getAnimalById.
- * @param id Parameter.
- * @return Result value.
- */
     [[nodiscard]] shared_ptr<Animal> getAnimalById(const string& id) const;
-/**
- * @brief Method getAssignedEmployee.
- * @return Result value.
- */
     [[nodiscard]] string getAssignedEmployee() const;
-/**
- * @brief Method getAnimalsStr.
- * @return Result value.
- */
     [[nodiscard]] string getAnimalsStr() const;
 
-/**
- * @brief Method setName.
- * @param n Parameter.
- */
+    /// @}
+
+    /// @name Mutators
+    /// @{
+
+    void clearAnimalsStrTemp();
     void setName(const string& n);
-/**
- * @brief Method setType.
- * @param t Parameter.
- */
     void setType(const string& t);
-/**
- * @brief Method setArea.
- * @param a Parameter.
- */
     void setArea(double a);
-/**
- * @brief Method setCapacity.
- * @param c Parameter.
- */
     void setCapacity(int c);
-/**
- * @brief Method setAnimals.
- * @param an Parameter.
- */
     void setAnimals(vector<shared_ptr<Animal>> an);
-/**
- * @brief Method setAssignedEmployee.
- * @param employeeId Parameter.
- */
     void setAssignedEmployee(const string& employeeId);
-/**
- * @brief Method setAnimals.
- * @param animals Parameter.
- */
     void setAnimals(const string& animals);
 
-/**
- * @brief Method printInfoAboutAviary.
- */
+    /// @}
+
+    /// @name Functional Methods
+    /// @{
+
     void printInfoAboutAviary() const;
-
-/**
- * @brief Method hasAnimal.
- * @param animalId Parameter.
- * @return Result value.
- */
     [[nodiscard]] bool hasAnimal(const string& animalId) const;
-/**
- * @brief Method canAddAnimal.
- * @param animal Parameter.
- * @return Result value.
- */
     [[nodiscard]] bool canAddAnimal(const shared_ptr<Animal>& animal) const;
-
-/**
- * @brief Method addAnimal.
- * @param animal Parameter.
- * @return Result value.
- */
-    bool addAnimal(const shared_ptr<Animal>& animal) ;
-/**
- * @brief Method removeAnimal.
- * @param id Parameter.
- * @return Result value.
- */
+    bool addAnimal(const shared_ptr<Animal>& animal);
     bool removeAnimal(const string& id);
-/**
- * @brief Method removeAssignedEmployee.
- */
     void removeAssignedEmployee();
-
-/**
- * @brief Method listAnimals.
- */
     void listAnimals() const;
+
+    /// @}
 };
 
 /**
  * @class Path
- * @brief Represents the Path entity in the zoo management system.
- * @details This class is part of the Zoo Management project.
- */
-/**
+ * @brief Represents a physical or logical connection between two aviaries.
+ *
+ * Each path corresponds to a walkway or transport link between enclosures,
+ * with an associated distance (length). It inherits from Edge.
+ *
  * @example
- * Path* obj = nullptr; // Create or obtain an instance
- * // Use the public interface as needed.
+ * @code
+ * Path p("A1", "A2", 42.0);
+ * cout << p.getLength(); // Outputs: 42.0
+ * @endcode
  */
-
-class Path : public Edge  {
+class Path : public Edge {
 
 public:
+    /**
+     * @brief Constructs a path between two aviaries.
+     * @param from Starting aviary ID.
+     * @param to Destination aviary ID.
+     * @param length Distance in meters.
+     */
     Path(const string& from, const string& to, double length)
         : Edge(from, to, length) {}
-/**
- * @brief Method getFromId.
- * @return Result value.
- */
+
     [[nodiscard]] string getFromId() const;
-/**
- * @brief Method getToId.
- * @return Result value.
- */
     [[nodiscard]] string getToId() const;
-/**
- * @brief Method getLength.
- * @return Result value.
- */
     [[nodiscard]] double getLength() const;
 };
 
 /**
  * @class ZooGraph
- * @brief Represents the ZooGraph entity in the zoo management system.
- * @details This class is part of the Zoo Management project.
- */
-/**
+ * @brief Represents the complete zoo graph with all aviaries, paths, and managers.
+ *
+ * The ZooGraph integrates database repositories and management subsystems for
+ * animals and employees. It extends the generic Graph structure with zoo-specific
+ * entities (Aviary, Path) and provides utilities for distance and connectivity checks.
+ *
+ * @details
+ * This class serves as the central orchestrator of the zoo's logical structure.
+ * It loads data from repositories, manages animals and employees, and performs
+ * spatial computations such as pathfinding and connectivity verification.
+ *
  * @example
- * ZooGraph* obj = nullptr; // Create or obtain an instance
- * // Use the public interface as needed.
+ * @code
+ * ZooGraph graph(avRepo, pathRepo, animalRepo, empRepo);
+ * graph.loadAviariesFromRepo(avRepo);
+ * graph.loadPathsFromRepo(pathRepo);
+ * graph.printZoo();
+ * @endcode
  */
-
-class ZooGraph : public Graph  {
+class ZooGraph : public Graph {
 
 private:
-    AviaryRepository& repoAv;
-    PathRepository& repoPth;
-    AnimalRepository& animalRepo;
-    EmployeeRepository& employeeRepo;
+    AviaryRepository& repoAv; ///< Repository for aviary data.
+    PathRepository& repoPth; ///< Repository for path data.
+    AnimalRepository& animalRepo; ///< Repository for animal data.
+    EmployeeRepository& employeeRepo; ///< Repository for employee data.
 
-    AnimalManager animalManager;
-    EmployeeManager employeeManager;
+    AnimalManager animalManager; ///< Manages all animal-related operations.
+    EmployeeManager employeeManager; ///< Manages all employee-related operations.
+
 public:
-/**
- * @brief Method ZooGraph.
- * @param aviaryRrepository Parameter.
- * @param pathRepository Parameter.
- * @param animalRepository Parameter.
- * @param employeeRepository Parameter.
- */
-    ZooGraph(AviaryRepository& aviaryRrepository, PathRepository& pathRepository, AnimalRepository& animalRepository, EmployeeRepository& employeeRepository);
+    /// @name Constructors
+    /// @{
 
-/**
- * @brief Method loadAviariesFromRepo.
- * @param repo Parameter.
- */
+    /**
+     * @brief Constructs the ZooGraph with connected repositories.
+     * @param aviaryRrepository Reference to the AviaryRepository.
+     * @param pathRepository Reference to the PathRepository.
+     * @param animalRepository Reference to the AnimalRepository.
+     * @param employeeRepository Reference to the EmployeeRepository.
+     */
+    ZooGraph(AviaryRepository& aviaryRrepository, PathRepository& pathRepository,
+             AnimalRepository& animalRepository, EmployeeRepository& employeeRepository);
+
+    /// @}
+
+    /// @name Data Loading
+    /// @{
+
     void loadAviariesFromRepo(AviaryRepository& repo);
-/**
- * @brief Method loadPathsFromRepo.
- * @param repo Parameter.
- */
     void loadPathsFromRepo(PathRepository& repo);
 
-/**
- * @brief Method getAnimalManager.
- * @return Result value.
- */
-    AnimalManager& getAnimalManager();
-/**
- * @brief Method getEmployeeManager.
- * @return Result value.
- */
-    EmployeeManager& getEmployeeManager();
+    /// @}
 
-/**
- * @brief Method getAviaries.
- * @return Result value.
- */
-    const unordered_map<string, shared_ptr<Vertex>>& getAviaries() const;
-/**
- * @brief Method getPaths.
- * @return Result value.
- */
-    vector<Edge> getPaths() const;
-/**
- * @brief Method getPath.
- * @param fromId Parameter.
- * @param toId Parameter.
- * @return Result value.
- */
-    const Edge* getPath(const string& fromId, const string& toId) const;
-/**
- * @brief Method getAviaryById.
- * @param id Parameter.
- * @return Result value.
- */
-    shared_ptr<Vertex> getAviaryById(const string& id) const;
-/**
- * @brief Method getAviaryNameById.
- * @param id Parameter.
- * @return Result value.
- */
-    string getAviaryNameById(const string& id) const;
-/**
- * @brief Method getNeighborsNames.
- * @param aviaryId Parameter.
- * @return Result value.
- */
-    vector<string> getNeighborsNames(const string& aviaryId) const;
-/**
- * @brief Method getNeighborsId.
- * @param aviaryId Parameter.
- * @return Result value.
- */
-    vector<string> getNeighborsId(const string& aviaryId) const;
+    /// @name Accessors
+    /// @{
 
-/**
- * @brief Method addAviary.
- * @param aviary Parameter.
- */
+    [[nodiscard]] AnimalManager& getAnimalManager();
+    [[nodiscard]] EmployeeManager& getEmployeeManager();
+
+    [[nodiscard]] const unordered_map<string, shared_ptr<Vertex>>& getAviaries() const;
+    [[nodiscard]] vector<Edge> getPaths() const;
+    [[nodiscard]] const Edge* getPath(const string& fromId, const string& toId) const;
+    [[nodiscard]] shared_ptr<Vertex> getAviaryById(const string& id) const;
+    [[nodiscard]] string getAviaryNameById(const string& id) const;
+    [[nodiscard]] vector<string> getNeighborsNames(const string& aviaryId) const;
+    [[nodiscard]] vector<string> getNeighborsId(const string& aviaryId) const;
+
+    /// @}
+
+    /// @name Graph Modification
+    /// @{
+
     void addAviary(shared_ptr<Aviary> aviary);
-/**
- * @brief Method addPath.
- * @param fromId Parameter.
- * @param toId Parameter.
- * @param length Parameter.
- */
     void addPath(const string& fromId, const string& toId, double length);
-
-/**
- * @brief Method removeAviary.
- * @param id Parameter.
- */
     void removeAviary(const string& id);
-/**
- * @brief Method removePath.
- * @param fromId Parameter.
- * @param toId Parameter.
- */
     void removePath(const string& fromId, const string& toId);
 
-/**
- * @brief Method findShortestPath.
- * @param startId Parameter.
- * @param endId Parameter.
- * @return Result value.
- */
-    vector<string> findShortestPath(const string& startId, const string& endId) const;
-/**
- * @brief Method distanceBetweenAviaries.
- * @param fromId Parameter.
- * @param toId Parameter.
- * @return Result value.
- */
-    double distanceBetweenAviaries(const string& fromId, const string& toId) const;
+    /// @}
 
-/**
- * @brief Method isZooConnected.
- * @return Result value.
- */
-    bool isZooConnected() const;
+    /// @name Graph Algorithms
+    /// @{
 
-/**
- * @brief Method printPathBetweenAviaries.
- * @param fromId Parameter.
- * @param toId Parameter.
- */
+    [[nodiscard]] vector<string> findShortestPath(const string& startId, const string& endId) const;
+    [[nodiscard]] double distanceBetweenAviaries(const string& fromId, const string& toId) const;
+    [[nodiscard]] bool isZooConnected() const;
+
+    /// @}
+
+    /// @name Visualization and Output
+    /// @{
+
     void printPathBetweenAviaries(const string& fromId, const string& toId) const;
-
-/**
- * @brief Method listAnimals.
- */
     void listAnimals() const;
-/**
- * @brief Method listEmployees.
- */
     void listEmployees() const;
-/**
- * @brief Method printAviaries.
- */
     void printAviaries() const;
-/**
- * @brief Method printZoo.
- */
     void printZoo() const;
+
+    /// @}
 };
 
-#endif //ZOOGRAPH_H
+#endif // ZOOGRAPH_H
